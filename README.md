@@ -1,120 +1,77 @@
-# Dreamer PyTorch
+# Dreamer
 
-[![tests](https://github.com/juliusfrost/dreamer-pytorch/workflows/tests/badge.svg)](https://github.com/juliusfrost/dreamer-pytorch/actions)
+Dreamer is a visual Model-Based Reinforcement algorithm, that learns a world model which captures latent dynamics from high-level pixel images and trains a control agent entirely in imagined rollouts from the learned world model.
 
+This work is my attempt at reproducing Dreamerv1 & v2 papers in pytorch specifically for continuous control tasks in deepmind control suite.
 
-**PA: This repository is in maintenance mode. No new features will be added but bugfixes and contributions are welcome. Please create a [pull request](https://github.com/juliusfrost/dreamer-pytorch/compare) with any fixes you have!**
+#### Noteworthy differences from original and prior works:
 
+ 1. This work compares Dreamer and Dreamerv2 agents for continuous control tasks only. Only KL-Balancing is used for dreamerv2 and policy type remains the same as dreamerv1 i.e. Tanh transformed MultivariateNormalDiag distribution.
+ 2. This work doesn't train dreamerv1 and v2 for 2M timesteps as did in the papers, instead both the agents are trained till 100K timesteps.
+ 3. All experiments are carried out on free single GPUs(Tesla T4) on google colab. Training time on Tesla T4 for 100K timesteps ~ 3 Hrs
+ 4. Due to limited computational resources (colab strict timeouts) results produced here are for five control tasks and are run for single seed only. 
+ 5. Hence plot_results are produced by running agents for 10 eval episodes for single seed. A fair evaluation would require running experiments for multiple seeds, this repo serves as a working implementation for both agents.
 
-Dream to Control: Learning Behaviors by Latent Imagination
+Evaluated agents Left: Dreamerv1,  Right:Dreamerv2 after training for 100K timesteps. 
 
-Paper: https://arxiv.org/abs/1912.01603  
-Project Website: https://danijar.com/project/dreamer/   
-TensorFlow 2 implementation: https://github.com/danijar/dreamer  
-TensorFlow 1 implementation: https://github.com/google-research/dreamer  
+<p align="center">
+  <img width="35%" src="https://github.com/adityabingi/Dreamer/blob/main/results/dreamer.gif">
+  <img width="35%" src="https://github.com/adityabingi/Dreamer/blob/main/results/dreamerv2.gif">
+</p>
 
-## Results
+For further information regarding methodology and experiments refer these papers
+1. [Dreamerv1 - DREAM TO CONTROL: LEARNING BEHAVIORS BY LATENT IMAGINATION](https://arxiv.org/pdf/1912.01603.pdf)
+2. [Dreamerv2 - MASTERING ATARI WITH DISCRETE WORLD MODELS](https://arxiv.org/pdf/2010.02193.pdf)
 
-| Task                    | Average Return @ 1M | Dreamer Paper @ 1M |
-|-------------------------|---------------------|--------------------|
-| Acrobot Swingup         | 69.54               | ~300               |
-| Cartpole Balance        | 877.5               | ~990               |
-| Cartpole Balance Sparse | 814                 | ~900               |
-| Cartpole Swingup        | 633.6               | ~800               |
-| Cup Catch               | 885.1               | ~990               |
-| Finger Turn Hard        | 212.8               | ~550               |
-| Hopper Hop              | 219                 | ~250               |
-| Hopper Stand            | 511.6               | ~990               |
-| Pendulum Swingup        | 724.9               | ~760               |
-| Quadruped Run           | 112.4               | ~450               |
-| Quadruped Walk          | 52.82               | ~650               |
-| Reacher Easy            | 962.8               | ~950               |
-| Walker Stand            | 956.8               | ~990               |
+## Code Structure
+Code structure is similar to original work by Danijar Hafner in Tensorflow
 
-Table 1. Dreamer PyTorch vs. Paper Implementation
+`dreamer.py`  - main function for training and evaluating dreamer agent
 
-- 1 random seed for PyTorch, 5 for the paper
-- Code @ commit [ccea6ae](https://github.com/juliusfrost/dreamer-pytorch/commit/ccea6ae4a397a94c328891bd78e81d52dd156cb6)
-- 37H for 1M steps on P100, 20H for 1M steps on V100
+`utils.py`    - Logger, miscallaneous utility functions
 
-## Installation
+`models.py`   - All the networks for world model and actor are implemented here
 
-- Install Python 3.11
-- Install Python [Poetry](https://python-poetry.org/docs/#installation)
+`replay_buffer.py` - Experience buffer for training world model
 
-```bash
-# clone the repo with rlpyt submodule
-git clone --recurse-submodules https://github.com/juliusfrost/dreamer-pytorch.git
-cd dreamer-pytorch
+`env_wrapper.py`  - Gym wrapper for Dm_control suite
 
-# Windows
-cd setup/windows_cu118
+All the hyperparameters are listed in main.py and are avaialble as command line args.
 
-# Linux
-cd setup/linux_cu118
+#### For training
+`python dreamer.py --env 'walker-walk' --algo 'Dreamerv1' --exp 'default_hp' --train`
+#### For Evaluation
+`python dreamer.py --env 'walker-walk' --algo 'Dreamerv1' --exp 'eval' --evaluate --restore --checkpoint_path '<your_ckpt_path>'`
+### Google_Colab
+ I have added a colab file [![Open Dreamer in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/17C4w5-LVK_xiLjcLMrFNY_PwncHW-QfL?usp=sharing)  to train and evaluate on freely avilable GPUs on google colab for quick reproducilibilty.
 
-# install with poetry
-poetry install
+## Plot Results
+Training and Evaluation results for dreamerv1 and v2 agents
 
-# install with pip
-pip install -r requirements.txt
-```
+Evaluation results after traning for 100k steps, average returns and standard deviations are reported for 10 eval episodes
+| Control Task | Dreamer | Dreamerv2 |
+| ---| --- | ---|
+| cartpole-balance | 450.6 ± 19.54  | 976.8 ± 1.11|
+| cartpole-swingup | 235.8 ± 42.74 | 684.1 ± 36.97|
+| walker-stand| 836.1 ± 165.2 | 937.5 ± 25.91 |
+| walker-walk| 487.9 ± 84.81| 228.7 ± 45.95|
+| cheetah-run| 234.6 ± 92.67 | 321.6 ± 8.91 |
 
-## Running Experiments
+Training Plots:
+Training Returns plotted against environment timesteps
+![dreamer_train](results/dreamer_train.jpg)
 
-To run experiments on Atari, run `python main.py`, and add any extra arguments you would like.
-For example, to run with a single gpu set `--cuda-idx 0`.
+Evaluation Plots:
+Evaluation is done at every 10k steps during training for 10 eval episodes. 
+Plots show average returns as solid lines and std deviations as shaded areas
 
-To run experiments on DeepMind Control, run `python main_dmc.py`. You can also set any extra arguments here.
+![dreamer_eval](results/dreamer_eval.jpg)
 
-Experiments will automatically be stored in `data/local/yyyymmdd/run_#`  
-You can use tensorboard to keep track of your experiment.
-Run `tensorboard --logdir=data`.
+## Acknowledgements
+This code is heavily inpsired by following open-source works
 
-If you have trouble reproducing any results, please raise a GitHub issue with your logs and results.
-Otherwise, if you have success, please share your trained model weights with us and with the broader community!
+dreamer by Danijar Hafner(lead author of both papers) : https://github.com/danijar/dreamer/blob/master/dreamer.py
 
-## Testing
+dreamer-pytorch by yusukeurakami : https://github.com/yusukeurakami/dreamer-pytorch
 
-To run tests:
-```bash
-pytest tests
-```
-
-If you want additional code coverage information:
-```bash
-pytest tests --cov=dreamer
-```
-
-### Code structure
-- `main.py` run atari experiment
-- `main_dmc.py` run deepmind control experiment 
-- `dreamer` dreamer code
-  - `agents` agent code used in sampling
-    - `atari_dreamer_agent.py` Atari agent
-    - `dmc_dreamer_agent.py` DeepMind Control agent
-    - `dreamer_agent.py` basic sampling agent, exploration, contains shared methods
-  - `algos` algorithm specific code
-    - `dreamer_algo.py` optimization algorithm, loss functions, hyperparameters
-    - `replay.py` replay buffer
-  - `envs` environment specific code
-    - `action_repeat.py` action repeat wrapper. ported from tf2 dreamer
-    - `atari.py` Atari environments. ported from tf2 dreamer
-    - `dmc.py` DeepMind Control Suite environment. ported from tf2 dreamer
-    - `env.py` base classes for environment
-    - `modified_atari.py` unused atari environment from rlpyt
-    - `normalize_actions.py` normalize actions wrapper. ported from tf2 dreamer
-    - `one_hot.py` one hot action wrapper. ported from tf2 dreamer
-    - `time_limit.py` Time limit wrapper. ported from tf2 dreamer
-    - `wrapper.py` Base environment wrapper class
-  - `experiments` currently not used
-  - `models` all models used in the agent
-    - `action.py` Action model
-    - `agent.py` Summarizes all models for agent module
-    - `dense.py` Dense fully connected models. Used for Reward Model, Value Model, Discount Model.
-    - `distribution.py` Distributions, TanH Bijector
-    - `observation.py` Observation Model
-    - `rnns.py` Recurrent State Space Model
-  - `utils` utility functions
-    - `logging.py` logging videos
-    - `module.py`  freezing parameters
+Dreamerv2 by Rajghugare : https://github.com/RajGhugare19/dreamerv2
